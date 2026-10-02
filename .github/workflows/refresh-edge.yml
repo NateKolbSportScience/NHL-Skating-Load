@@ -1,0 +1,33 @@
+# Refreshes the NHL EDGE skating profiles every Monday so the app stays current through the season.
+# Game lists and games themselves already load live in the app; this keeps the bundled profiles fresh.
+name: Refresh NHL EDGE data
+
+on:
+  schedule:
+    - cron: "17 10 * * 1"   # Mondays, 10:17 UTC
+  workflow_dispatch: {}      # or run it by hand from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Pull the current season's EDGE profiles
+        run: |
+          SEASON=$(python -c "import nhl_api; print(nhl_api.current_season())")
+          echo "season: $SEASON"
+          python tools/fetch_edge.py --season "$SEASON"
+      - name: Commit if anything changed
+        run: |
+          git config user.name "edge-refresh-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/edge_snapshot_*.json
+          git diff --cached --quiet || git commit -m "Refresh NHL EDGE profiles"
+          git push
