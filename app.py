@@ -165,6 +165,18 @@ a {{ color:{ACCENT}; }}
 .final .lab {{ color:{TEXT2}; }}
 .btn-ghost {{ background:transparent; color:{ACCENT}; border:1px solid {ACCENT}; border-radius:8px; padding:6px 14px; font-weight:700; }}
 #rp-main {{ display:grid; grid-template-columns:minmax(0,3fr) minmax(0,1fr); gap:16px; align-items:start; }}
+/* ---------- phones: rink full width, play-by-play below it ---------- */
+@media (max-width: 767.98px) {{
+  #rp-main {{ grid-template-columns:minmax(0,1fr); }}
+  #rp-side-ticker {{ height:auto; max-height:260px; overflow-y:auto; }}
+  .rp-controls input[type=range] {{ min-width:100%; order:10; }}
+  #rp-stage.retro .rp-title {{ font-size:.7rem; }}
+  body.bslib-page-navbar div.bslib-sidebar-layout.html-fill-item {{ display:flex !important; flex-direction:column !important; }}
+  .bslib-sidebar-layout > .sidebar {{ order:-1; width:100% !important; height:auto !important; max-height:none !important; overflow:visible !important; }}
+  .bslib-sidebar-layout > .sidebar > .sidebar-content {{ height:auto !important; max-height:none !important; overflow:visible !important; padding-bottom:6px; }}
+  .bslib-sidebar-layout > .main {{ height:auto !important; overflow:visible !important; }}
+  .bslib-sidebar-layout > .sidebar .note, .bslib-sidebar-layout > .sidebar hr, .shiny-input-container:has(#seed) {{ display:none; }}
+}}
 /* ---------- 8-bit mode (replay tab) ---------- */
 .rp-toggle {{ color:{TEXT2}; font-size:.85rem; display:flex; align-items:center; gap:6px; cursor:pointer; }}
 .rp-toggle input {{ accent-color:{ACCENT}; width:16px; height:16px; }}
@@ -260,7 +272,7 @@ sidebar = ui.sidebar(
     ui.hr(),
     ui.p(ui.span("Real", class_="real-tag"), " NHL EDGE season profile, ", SEASON, " regular season.", class_="note"),
     ui.p(ui.span("Simulated", class_="sim-tag"), " shift-by-shift tracking, calibrated to that profile.", class_="note"),
-    width=260, bg=CARD,
+    width=260, bg=CARD, open={"desktop": "open", "mobile": "always"},
 )
 
 replay_tab = ui.nav_panel(

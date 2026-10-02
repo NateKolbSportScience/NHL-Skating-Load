@@ -1,5 +1,9 @@
 # NHL Skating Load (Shiny for Python)
 
+[![Live demo](https://img.shields.io/badge/▶_Live_demo-open_the_app-E8C25A?style=for-the-badge)](https://natekolbsportscience-nhl-skating-load.share.connect.posit.cloud)
+
+**[Open the live app](https://natekolbsportscience-nhl-skating-load.share.connect.posit.cloud)**: nothing to install. Pick any team and any completed game. It may take a few seconds to wake up.
+
 ![Game replay](assets/replay.png)
 
 Real NHL games replayed on a rink, followed by the post-game report a sport scientist would hand to coaches and medical staff.
