@@ -23,6 +23,8 @@ Pick any NHL team and any completed game (regular season or playoffs) and watch 
 | **Validation** | The estimates checked against the NHL's real per-game tracking: estimated vs real distance, a Bland-Altman plot, and errors by game and by player. |
 | **About** | Method and metric definitions. |
 
+![Goal](assets/goal.png)
+
 ![Post-game stats](assets/game_stats.png)
 
 ![Post-game report](assets/report.png)
