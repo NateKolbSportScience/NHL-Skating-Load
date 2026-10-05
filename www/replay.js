@@ -425,8 +425,15 @@
     setPlaying(false);
     $("rp-stage").style.display = "none";
     $("rp-stats").style.display = "block";
-    if (window.Shiny) Shiny.setInputValue("replay_done", `${G.id}:${Date.now()}`, { priority: "event" });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const mobile = window.matchMedia("(max-width: 767.98px)").matches;
+    if (window.Shiny) Shiny.setInputValue("replay_done", { gid: G.id, mobile, at: Date.now() }, { priority: "event" });
+    if (mobile) {   // phones open the player's report: bring it into view once it has rendered
+      let tries = 0;
+      const go = () => { const h = document.getElementById("hdr"), el = h && (h.firstElementChild || h);
+        if (el && el.getBoundingClientRect().height > 0 && h.textContent.trim()) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        else if (tries++ < 20) setTimeout(go, 250); };
+      setTimeout(go, 300);
+    } else window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function showReplay(restart) {

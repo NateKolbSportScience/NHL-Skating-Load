@@ -100,6 +100,13 @@ def league_bursts_pg() -> dict:
     return {k: float(t[f"{k}_pg"].mean()) for k in ("b18", "b20", "b22")}
 
 
+def profile_season(player_id: int) -> str:
+    """Season the player's profile comes from, e.g. '2025-26' (last season until he has 10+ games in the new one)."""
+    p = next((x for x in load()["players"] if x["id"] == player_id), None)
+    s = (p or {}).get("season") or load()["season"]
+    return f"{s[:4]}-{s[6:]}"
+
+
 def headshot(player_id: int) -> str:
     p = next((x for x in load()["players"] if x["id"] == player_id), None)
     return p["mug"] if p else ""

@@ -270,7 +270,7 @@ sidebar = ui.sidebar(
     ui.input_numeric("seed", "Game seed", value=8, min=1, step=1),
     ui.p("The same seed always gives the same game, so a report can be reproduced.", class_="note"),
     ui.hr(),
-    ui.p(ui.span("Real", class_="real-tag"), " NHL EDGE season profile, ", SEASON, " regular season.", class_="note"),
+    ui.p(ui.span("Real", class_="real-tag"), " NHL EDGE season profiles. A player switches to the new season once he has 10+ games.", class_="note"),
     ui.p(ui.span("Simulated", class_="sim-tag"), " shift-by-shift tracking, calibrated to that profile.", class_="note"),
     width=260, bg=CARD, open={"desktop": "open", "mobile": "always"},
 )
@@ -390,8 +390,9 @@ validation_tab = ui.nav_panel(
                     "<li><b>What it doesn't show:</b> that the estimate tracks how hard he skated <i>that specific night</i>. Each player's "
                     "season distance per 60 already includes these games, and most of the night-to-night difference comes from ice time, which is real. "
                     "Speeds, bursts and on-ice positions can't be checked: the NHL doesn't publish them per game.</li>"
-                    "<li><b>Replay movement</b> was tuned once (one drift setting for the whole league) so the replay's average distance matches real "
-                    "tracking. It isn't tuned per player.</li></ul>")),
+                    "<li><b>Replay movement</b> uses one league-wide set of movement settings, tuned so the replay's average distance matches real "
+                    "NHL tracking and its turning and gliding match public frame-by-frame player tracking (Stathletes Big Data Cup). "
+                    "It isn't tuned per player.</li></ul>")),
     ui.layout_columns(
         ui.card(ui.card_header("By game"), ui.output_ui("val_games")),
         ui.card(ui.card_header("Selected game, player by player"), ui.output_ui("val_players")),
@@ -497,8 +498,12 @@ def server(input, output, session):
         g, p = game(), prof()
         where = f"vs {g.opp}" if g.home else f"@ {g.opp}"
         if g.source == "real shifts":
-            date = replay.parse(g.game_id)["pbp"]["gameDate"]
-            meta = f"#{p.num} · {p.pos} · {p.team}  {where} · {date}"
+            G = replay.parse(g.game_id)
+            date = G["pbp"]["gameDate"]
+            gp = G["players"].get(p.id) or G["players"].get(int(p.id)) or {}
+            team = gp.get("team") or p.team          # the team he played for in this game
+            num = gp.get("num") or p.num
+            meta = f"#{num} · {p.pos} · {team}  {where} · {date}"
             tags = [ui.span("Real game: real shifts, TOI & game state", class_="real-tag"),
                     ui.span("Speed trace estimated from his EDGE profile", class_="sim-tag")]
         else:
@@ -506,7 +511,7 @@ def server(input, output, session):
             if real_gid():
                 note = " (didn't play in the selected game, so this is a simulated game)"
             meta = f"#{p.num} · {p.pos} · {p.team}  {where} · game seed {input.seed()}{note}"
-            tags = [ui.span("Simulated game", class_="sim-tag"), ui.span(f"Profile: real EDGE {SEASON}", class_="real-tag")]
+            tags = [ui.span("Simulated game", class_="sim-tag"), ui.span(f"Profile: real EDGE {data.profile_season(p.id)}", class_="real-tag")]
         return ui.div(
             ui.tags.img(src=headshot(p), alt=p.name),
             ui.div(ui.div(p.name, class_="nm"), ui.div(meta, class_="meta"), *tags),
@@ -727,7 +732,7 @@ def server(input, output, session):
         p = prof()
         return ui.div(ui.tags.img(src=headshot(p), alt=p.name),
                       ui.div(ui.div(p.name, class_="nm"), ui.div(f"#{p.num} · {p.pos} · {p.team} · {p.gp} GP", class_="meta"),
-                             ui.span(f"Real NHL EDGE · {SEASON} regular season", class_="real-tag")), class_="hdr")
+                             ui.span(f"Real NHL EDGE · {data.profile_season(p.id)} regular season", class_="real-tag")), class_="hdr")
 
     @render.ui
     def prof_tiles():
@@ -949,7 +954,11 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.replay_done)
     def _done():
-        pass  # the replay panel swaps itself to the stats client-side; kept for logging / future use
+        # desktop: the replay panel swaps itself to the game summary (client-side).
+        # phones: jump straight to the selected player's post-game report; the summary stays on the replay tab.
+        d = input.replay_done()
+        if isinstance(d, dict) and d.get("mobile"):
+            ui.update_navset("nav", selected="Post-game report")
 
 
     # ---------------- validation vs real NHL tracking

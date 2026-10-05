@@ -44,11 +44,11 @@ NHL EDGE publishes each skater's **real tracked distance for his last 10 games**
 | | Average error | Bias | Correlation |
 |---|---|---|---|
 | Post-game skating-load estimate | ±0.21 km (5.1%) | +0.1% | r = 0.96 |
-| Distance implied by the replay's movement | ±0.28 km (6.7%) | −0.7% | r = 0.94 |
+| Distance implied by the replay's movement | ±0.29 km (7.0%) | −0.2% | r = 0.94 |
 
 ![Validation](assets/validation.png)
 
-What this shows: a player's real shifts plus his season skating intensity predict his real game distance to within about 5%. What it doesn't show: that the estimate captures how hard he skated on a given night. His season distance per 60 already includes these games, and ice time (which is real) drives most of the game-to-game difference. Speeds, bursts and positions aren't published per game, so they can't be checked. The replay movement has a single league-wide drift setting, tuned so its average distance matches real tracking.
+What this shows: a player's real shifts plus his season skating intensity predict his real game distance to within about 5%. What it doesn't show: that the estimate captures how hard he skated on a given night. His season distance per 60 already includes these games, and ice time (which is real) drives most of the game-to-game difference. Speeds, bursts and positions aren't published per game, so they can't be checked. The replay movement uses one league-wide set of movement settings, tuned so its average distance matches real tracking and its movement pattern matches real player tracking (below).
 
 ## Quick start
 
@@ -83,6 +83,18 @@ python tools/fetch_games.py --team EDM --last 5  # pre-download games for offlin
 | Box score | Skating load per player (see below) |
 
 Each skater moves toward a target spot set by his role (C, wing or D), which team has the puck, and where it is. Attacking forwards support the puck and the D hold the blue line; defenders collapse between the puck and their net. Skaters are limited to realistic speeds, line up for every real faceoff, and come off the bench on their real shift changes.
+
+### Movement checked against real player tracking
+
+To make the movement look like real skating, the model was tuned against public frame-by-frame player tracking: Stathletes' Big Data Cup data from the 2022 Olympic women's hockey tournament (34 power plays, every visible skater's x/y position at 30 frames per second, from broadcast video). Both were compared second by second on power plays:
+
+| | Real tracking | Model before | Model now |
+|---|---|---|---|
+| Direction held from one second to the next (1 = straight line) | 0.58 | 0.08 | 0.72 |
+| Typical change of direction per second | 33° | 81° | 21° |
+| Seconds with a near-reversal (>90°) | 15% | 45% | 9% |
+
+The earlier model picked a fresh direction every second, so skaters zig-zagged. The current one carries momentum from second to second and drifts smoothly around its target spot, so skaters glide and carve. Only the *shape* of movement was matched: the tracking is from women's international hockey, so absolute speeds stay anchored to the NHL's own EDGE distances. Total distance still matches NHL tracking (bias −0.2%).
 
 ## How skating load is estimated
 
@@ -150,7 +162,7 @@ assets/               screenshots
 
 ## Credits
 
-NHL EDGE data comes from the NHL's public API (`api-web.nhle.com`); endpoints are documented in the community [NHL API Reference](https://github.com/Zmalski/NHL-API-Reference). This is an independent portfolio project, not affiliated with or endorsed by the NHL.
+NHL EDGE data comes from the NHL's public API (`api-web.nhle.com`); endpoints are documented in the community [NHL API Reference](https://github.com/Zmalski/NHL-API-Reference). Player tracking used to tune the replay movement comes from the [Stathletes Big Data Cup](https://github.com/bigdatacup/Big-Data-Cup-2021) public dataset, used under its non-commercial research terms. This is an independent portfolio project, not affiliated with or endorsed by the NHL or Stathletes.
 
 ---
 

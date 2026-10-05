@@ -132,9 +132,11 @@ def describe(ev, players) -> str:
 
 # ------------------------------------------------------------------ movement model
 BENCH_Y = 44.0
-WANDER_THETA, WANDER_SIGMA = 0.38, 16.8   # drift around the target spot (ft)
-FOLLOW = 0.68                             # share of the gap to the target closed each second
+WANDER_THETA, WANDER_SIGMA = 0.21, 17.76  # drift around the target spot (ft); tuned to real tracking (see README)
+FOLLOW = 0.685                            # share of the gap to the target closed each second
 VMAX_FTS = 32.0                          # top skating speed in the model (~35 km/h)
+INERTIA = 0.36                            # share of last second's velocity carried into the next (momentum)
+WANDER_PHI = 0.54                         # smoothness of the drift itself (0 = white noise)
 
 
 def _clamp(x, y):
@@ -260,6 +262,8 @@ def build_replay(game_id: int, seed: int = 7) -> dict:
 
     pos = {}                                   # pid -> list of [x, y] or None per second
     wander = {}
+    wvel = {}                                  # pid -> drift velocity (smooth wander)
+    vel = {}                                   # pid -> last second's velocity (momentum)
     cur_xy = {}
     period_of = np.minimum(ts // PERIOD_S + 1, G["n_per"])
     for t in range(T + 1):
@@ -285,27 +289,37 @@ def build_replay(game_id: int, seed: int = 7) -> dict:
                     if fo is not None:
                         tx, ty = _faceoff_spot(slot, dir_, fo["x"], fo["y"], fo["owner"])
                         nx, ny = tx, ty  # players line up for the draw
+                        vel[p] = (0.0, 0.0)
                     else:
                         tx, ty = _target(slot, dir_, poss[t] == side, px, py, rng)
                         # each skater keeps moving around his spot: a smooth random drift (Ornstein-Uhlenbeck)
                         ox, oy = wander.get(p, (0.0, 0.0))
-                        ox += -WANDER_THETA * ox + rng.normal(0, WANDER_SIGMA)
-                        oy += -WANDER_THETA * oy + rng.normal(0, WANDER_SIGMA * 0.7)
+                        wx, wy = wvel.get(p, (0.0, 0.0))
+                        wx = WANDER_PHI * wx + rng.normal(0, WANDER_SIGMA)
+                        wy = WANDER_PHI * wy + rng.normal(0, WANDER_SIGMA * 0.7)
+                        wvel[p] = (wx, wy)
+                        ox += -WANDER_THETA * ox + wx
+                        oy += -WANDER_THETA * oy + wy
                         wander[p] = (ox, oy)
                         tx, ty = tx + ox, ty + oy
                         cx, cy = cur_xy[p]
                         dx, dy = (tx - cx) * FOLLOW, (ty - cy) * FOLLOW
+                        pvx, pvy = vel.get(p, (0.0, 0.0))
+                        dx, dy = INERTIA * pvx + (1 - INERTIA) * dx, INERTIA * pvy + (1 - INERTIA) * dy
                         step = np.hypot(dx, dy)
                         vmax = VMAX_FTS
                         if step > vmax:
                             dx, dy = dx * vmax / step, dy * vmax / step
                         nx, ny = cx + dx, cy + dy
                 nx, ny = _clamp(nx, ny)
+                if players[p]["pos"] != "G" and fo is None:
+                    vel[p] = (nx - cur_xy[p][0], ny - cur_xy[p][1])
                 cur_xy[p] = (nx, ny)
                 pos.setdefault(p, [None] * (T + 1))[t] = [round(nx, 1), round(ny, 1)]
             # players who left the ice come back on from the bench next shift
             for p in [p for p in cur_xy if players[p]["side"] == side and p not in pids]:
                 del cur_xy[p]
+                vel.pop(p, None)
 
     # events for the ticker and the rink markers
     ticker = []
